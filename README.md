@@ -1,0 +1,32 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+## Proposta FAPESP
+
+### VARIABILIDADE ESPAÇOTEMPORAL DE XCO2 E SIF NA AMAZÔNIA LEGAL: ABORDAGEM EM APRENDIZADO DE MÁQUINA ESTATÍSTICO
+
+**RESUMO**: A Amazônia Legal é importantíssima para a regulação
+climática global devido à sua floresta e capacidade de sequestro de
+carbono. A crescente preocupação com as mudanças climáticas é
+impulsionada pelo aumento de gases de efeito estufa (GEE), especialmente
+o CO2, cuja emissão no Brasil está associada principalmente às mudanças
+no uso e ocupação da terra. Devido a necessidade mundial de compreender
+a dinâmica do CO2 nos ecossistemas, missões de monitoramento deste e de
+outros GEE tem sido implementadas, como o Orbiting Carbon Observatory-2
+(OCO-2). Diante disto, utilizando dados orbitais do OCO-2, objetiva-se
+nesse estudo avaliar a variabilidade espaçotemporal da coluna média de
+dióxido de carbono na atmosfera (XCO2) e da fluorescência de clorofila
+induzida pelo sol (SIF) na Amazônia Legal, no período de 2015 - 2024,
+bem como investigar suas relações com índices vegetativos, climáticos e
+atividades antrópicas. Serão aplicadas técnicas de geoestatística,
+modelagem de séries temporais e métodos de aprendizado de máquina
+estatístico, a fim de propor um modelo para a estimativa de XCO2 em
+locais e dias não amostrados com alta acurácia e precisão na região da
+Amazônia legal. Espera-se observar um padrão consistente de
+variabilidade de XCO2, sugerindo que o contraste na variabilidade
+observada entre áreas desmatadas, áreas protegidas ambientalmente e
+terras indígenas, pode estar condicionando esses ambientes como
+potenciais fontes/sumidouros de carbono atmosférico. Espera-se que essa
+abordagem contribua para melhorar o entendimento da dinâmica da emissão
+e concentração de CO2 atmosférico em diferentes regiões, usos e manejo
+da terra.
