@@ -7,6 +7,10 @@ output: github_document
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
+  warning = FALSE,
+  error = FALSE,
+  message = FALSE,
+  eval = TRUE,
   comment = "#>"
 )
 ```
@@ -17,3 +21,111 @@ knitr::opts_chunk$set(
 
 
 **RESUMO**: A Amazônia Legal é importantíssima para a regulação climática global devido à sua floresta e capacidade de sequestro de carbono. A crescente preocupação com as mudanças climáticas é impulsionada pelo aumento de gases de efeito estufa (GEE), especialmente o CO2, cuja emissão no Brasil está associada principalmente às mudanças no uso e ocupação da terra. Devido a necessidade mundial de compreender a dinâmica do CO2 nos ecossistemas, missões de monitoramento deste e de outros GEE tem sido implementadas, como o Orbiting Carbon Observatory-2 (OCO-2). Diante disto, utilizando dados orbitais do OCO-2, objetiva-se nesse estudo avaliar a variabilidade espaçotemporal da coluna média de dióxido de carbono na atmosfera (XCO2) e da fluorescência de clorofila induzida pelo sol (SIF) na Amazônia Legal, no período de 2015 - 2024, bem como investigar suas relações com índices vegetativos, climáticos e atividades antrópicas. Serão aplicadas técnicas de geoestatística, modelagem de séries temporais e métodos de aprendizado de máquina estatístico, a fim de propor um modelo para a estimativa de XCO2 em locais e dias não amostrados com alta acurácia e precisão na região da Amazônia legal. Espera-se observar um padrão consistente de variabilidade de XCO2, sugerindo que o contraste na variabilidade observada entre áreas desmatadas, áreas protegidas ambientalmente e terras indígenas, pode estar condicionando esses ambientes como potenciais fontes/sumidouros de carbono atmosférico. Espera-se que essa abordagem contribua para melhorar o entendimento da dinâmica da emissão e concentração de CO2 atmosférico em diferentes regiões, usos e manejo da terra.
+
+
+## Carregando pacotes
+```{r}
+library(tidyverse)
+library(ggridges)
+library(ggpubr)
+library(geobr)
+library(gstat)
+library(vegan)
+library(dplyr)
+library(ggplot2)
+source("R/my-function.R")
+
+#Carregando polígono do Brasil
+country_br <- geobr::read_country(showProgress = FALSE)
+amazon <- geobr::read_amazon(showProgress = FALSE)
+states <- geobr::read_state(showProgress = FALSE)
+```
+
+
+```{r}
+para_pol <- states$geom[5] |> purrr::pluck(1) |> as.matrix()
+amazon_pol <- amazon$geom |> purrr::pluck(1) |> as.matrix()
+amazonas_pol <- states$geom[3] |> purrr::pluck(1) |> as.matrix()
+```
+
+# Carregando os dados de xco2 e filtrar
+```{r}
+data_set_xco2 <- readr::read_rds("data/data-set-xco2.rds") |>
+  # dplyr::filter(
+  #   longitude >= -59.7700 & longitude <= -49.8361,
+  #   latitude >= -12.3561 & latitude <= -1.6058
+  # ) |>
+  dplyr::mutate(
+    time = lubridate::as_datetime(time, tz = "America/Sao_Paulo"),
+    year = lubridate::year(time),
+    month = lubridate::month(time),
+    day = lubridate::day(time),
+    date = lubridate::as_date(time)
+  )
+```
+
+
+```{r}
+data_set_xco2_anomal <- data_set_xco2 |>
+  dplyr::filter(xco2_quality_flag == 0) |>
+  dplyr::group_by(date) |>
+  tidyr::nest() |>
+  dplyr::mutate(nobs = purrr::map_int(data, nrow)) |>
+  dplyr::filter(nobs >= 5) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    data = purrr::map(data, 
+                      ~ dplyr::mutate(.x, 
+                                      xco2_anomalia = .x$xco2 - median(
+                                        .x$xco2, na.rm = TRUE)))
+  ) |>
+  
+  tidyr::unnest(data)
+dplyr::glimpse(data_set_xco2_anomal)
+```
+
+
+```{r}
+amazon |> 
+  ggplot() +
+  geom_sf()
+```
+
+
+```{r}
+data_set_xco2_anomal <- data_set_xco2_anomal |>
+  filter(latitude >= -20,
+         year == 2022)  |> 
+  mutate(
+    flag_amazon = def_pol(longitude,latitude,amazon_pol),
+    flag_para = def_pol(longitude,latitude,para_pol),
+    flag_amazonas = def_pol(longitude,latitude,amazonas_pol)
+  )
+
+data_set_xco2_anomal |> 
+  filter(flag_amazon|flag_para|flag_amazonas) |> 
+  group_by(year) |> 
+  count()
+```
+
+
+```{r}
+amazon |> 
+  ggplot() +
+  geom_sf() +
+  geom_point(
+    data = data_set_xco2_anomal |> 
+      filter(flag_amazon) ,
+  aes(x=longitude,y=latitude))
+
+
+amazon |> 
+  ggplot() +
+  geom_sf() +
+  geom_point(
+    data = data_set_xco2_anomal |> 
+      filter(flag_amazon|flag_para|flag_amazonas) ,
+  aes(x=longitude,y=latitude))
+```
+
+

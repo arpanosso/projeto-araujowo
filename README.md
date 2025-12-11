@@ -30,3 +30,134 @@ potenciais fontes/sumidouros de carbono atmosférico. Espera-se que essa
 abordagem contribua para melhorar o entendimento da dinâmica da emissão
 e concentração de CO2 atmosférico em diferentes regiões, usos e manejo
 da terra.
+
+## Carregando pacotes
+
+``` r
+library(tidyverse)
+library(ggridges)
+library(ggpubr)
+library(geobr)
+library(gstat)
+library(vegan)
+library(dplyr)
+library(ggplot2)
+source("R/my-function.R")
+
+#Carregando polígono do Brasil
+country_br <- geobr::read_country(showProgress = FALSE)
+amazon <- geobr::read_amazon(showProgress = FALSE)
+states <- geobr::read_state(showProgress = FALSE)
+```
+
+``` r
+para_pol <- states$geom[5] |> purrr::pluck(1) |> as.matrix()
+amazon_pol <- amazon$geom |> purrr::pluck(1) |> as.matrix()
+amazonas_pol <- states$geom[3] |> purrr::pluck(1) |> as.matrix()
+```
+
+# Carregando os dados de xco2 e filtrar
+
+``` r
+data_set_xco2 <- readr::read_rds("data/data-set-xco2.rds") |>
+  # dplyr::filter(
+  #   longitude >= -59.7700 & longitude <= -49.8361,
+  #   latitude >= -12.3561 & latitude <= -1.6058
+  # ) |>
+  dplyr::mutate(
+    time = lubridate::as_datetime(time, tz = "America/Sao_Paulo"),
+    year = lubridate::year(time),
+    month = lubridate::month(time),
+    day = lubridate::day(time),
+    date = lubridate::as_date(time)
+  )
+```
+
+``` r
+data_set_xco2_anomal <- data_set_xco2 |>
+  dplyr::filter(xco2_quality_flag == 0) |>
+  dplyr::group_by(date) |>
+  tidyr::nest() |>
+  dplyr::mutate(nobs = purrr::map_int(data, nrow)) |>
+  dplyr::filter(nobs >= 5) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    data = purrr::map(data, 
+                      ~ dplyr::mutate(.x, 
+                                      xco2_anomalia = .x$xco2 - median(
+                                        .x$xco2, na.rm = TRUE)))
+  ) |>
+  
+  tidyr::unnest(data)
+dplyr::glimpse(data_set_xco2_anomal)
+#> Rows: 7,072,656
+#> Columns: 13
+#> $ date              <date> 2020-01-01, 2020-01-01, 2020-01-01, 2020-01-01, 202…
+#> $ longitude         <dbl> -42.84213, -42.84762, -42.86936, -42.85177, -42.8458…
+#> $ latitude          <dbl> -22.90340, -22.91221, -22.91846, -22.86328, -22.8253…
+#> $ time              <dttm> 2020-01-01 13:41:10, 2020-01-01 13:41:11, 2020-01-0…
+#> $ xco2              <dbl> 409.1369, 409.6229, 410.2086, 411.7355, 408.4768, 40…
+#> $ xco2_quality_flag <int> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
+#> $ xco2_incerteza    <dbl> 0.4135483, 0.3605141, 0.3879354, 0.3629870, 0.380306…
+#> $ path              <chr> "data-raw/2020/OCO2/oco2_LtCO2_200101_B11210Ar_24091…
+#> $ year              <dbl> 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020, 2020…
+#> $ month             <dbl> 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1…
+#> $ day               <int> 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1…
+#> $ xco2_anomalia     <dbl> -0.53573608, -0.04974365, 0.53598022, 2.06289673, -1…
+#> $ nobs              <int> 2095, 2095, 2095, 2095, 2095, 2095, 2095, 2095, 2095…
+```
+
+``` r
+amazon |> 
+  ggplot() +
+  geom_sf()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
+data_set_xco2_anomal <- data_set_xco2_anomal |>
+  filter(latitude >= -20,
+         year == 2022)  |> 
+  mutate(
+    flag_amazon = def_pol(longitude,latitude,amazon_pol),
+    flag_para = def_pol(longitude,latitude,para_pol),
+    flag_amazonas = def_pol(longitude,latitude,amazonas_pol)
+  )
+
+data_set_xco2_anomal |> 
+  filter(flag_amazon|flag_para|flag_amazonas) |> 
+  group_by(year) |> 
+  count()
+#> # A tibble: 1 × 2
+#> # Groups:   year [1]
+#>    year      n
+#>   <dbl>  <int>
+#> 1  2022 171723
+```
+
+``` r
+amazon |> 
+  ggplot() +
+  geom_sf() +
+  geom_point(
+    data = data_set_xco2_anomal |> 
+      filter(flag_amazon) ,
+  aes(x=longitude,y=latitude))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+``` r
+
+
+amazon |> 
+  ggplot() +
+  geom_sf() +
+  geom_point(
+    data = data_set_xco2_anomal |> 
+      filter(flag_amazon|flag_para|flag_amazonas) ,
+  aes(x=longitude,y=latitude))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
